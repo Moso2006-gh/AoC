@@ -1,69 +1,64 @@
-raw_data = """###############
-#...#...#.....#
-#.#.#.#.#.###.#
-#S#...#.#.#...#
-#######.#.#.###
-#######.#.#...#
-#######.#.###.#
-###..E#...#...#
-###.#######.###
-#...###...#...#
-#.#####.#.###.#
-#.#...#.#.#...#
-#.#.#.#.#.#.###
-#...#...#...###
-###############"""
-
-from itertools import product
+import numpy as np
+from pathlib import Path
 from collections import defaultdict
 
-mapa = [list(row) for row in raw_data.split("\n")]
-start_pos = next(((i, j) for i, row in enumerate(mapa) for j, element in enumerate(row) if element == "S"), None)
+input = np.array([
+    list(x) for x in 
+    open(Path(__file__).parent / "20.txt", "r").read().split("\n")
+])
+start = np.argwhere(input == "S")[0]
+end = np.argwhere(input == "E")[0]
 
-directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
-pos = start_pos
-steps = 0
-path = {}
-while mapa[pos[0]][pos[1]] != "E":
-    mapa[pos[0]][pos[1]] = steps
-    path[pos] = steps
-    for direction in directions:
-        new_pos = (pos[0] + direction[0], pos[1] + direction[1])
-        if mapa[new_pos[0]][new_pos[1]] in  [".", "E"]:
+directions = np.array([[-1, 0], [0, 1], [1, 0], [0, -1]])
+
+# Add numbers
+i = 1
+pos = start.copy()
+path = [start]
+mapa = np.array([[-1 if n == "#" else 0 for n in m] for m in input])
+while not np.array_equal(pos, end):
+    for dir in directions:
+        new_pos = pos + np.array(dir)
+        if mapa[tuple(new_pos)] == 0:
+            mapa[tuple(new_pos)] = i
+            path.append(new_pos)
             pos = new_pos
+
+            i += 1
             break
-    steps += 1
-mapa[pos[0]][pos[1]] = steps
-path[pos] = steps
+mapa[tuple(new_pos)] = i - 1
 
-sol = 0
-cheats = defaultdict(int)
-for pos, step in path.items():
-    dif_saves = {}
-    if pos == (7, 9):
-        print("a")
-    for dir in [(i, j) for i, j in product((-3, -2, -1, 0, 1, 2, 3), repeat=2) if abs(i) + abs(j) <= 3]:
-        if dir == (2, 0):
-            print("a")
-        new_pos = (pos[0] + dir[0], pos[1] + dir[1])
-        if new_pos in path:
-            distance_traveled = abs(dir[0]) + abs(dir[1])
-            save = (path[new_pos] - step - distance_traveled)
-            for dif_save_value, dif_save_pos_steps in dif_saves.items():
-                if dif_save_value == save:
-                    if dif_save_pos_steps[1] > distance_traveled:
-                        dif_saves[dif_save_value] = [new_pos, distance_traveled]
+cheats = {}
+for pos in path[:-3]:
+    n1 = mapa[tuple(pos)]
+    for dir1 in directions:
+        first_step = pos + np.array(dir1)
+        if mapa[tuple(first_step)] != -1:
+            continue
 
-            if save > best_save[0] or (save == best_save[0] and best_save[2] > abs(dir[0]) + abs(dir[1])):
-                best_save = (save, new_pos, abs(dir[0]) + abs(dir[1]))
-    if cheats[best_save[1]] < best_save[0] and best_save[0] != 0:
-        cheats[best_save[1]] = best_save[0]
+        for dir2 in directions:
+            try:
+                second_step = first_step + np.array(dir2)
+                n2 = mapa[tuple(second_step)]
 
-sol = 0
-for cheat, value in cheats.items():
-    if value >= 20:
-        sol += 1
-        
-print(cheats)
-print(sol)
+                cheat_value = (n2 - n1) - 2
+                if cheat_value < 1:
+                    continue
 
+                cheats[tuple(np.array([pos, second_step]).flatten())] = cheat_value
+            except:
+                pass
+
+def count_keys_with_same_value_obj(d):
+    obj_to_keys = defaultdict(int)
+    
+    for _, val in d.items():
+        obj_to_keys[val] += 1
+    
+    # Prepare a dict with counts for each value object
+    
+    return obj_to_keys
+
+result = count_keys_with_same_value_obj(cheats)
+print(mapa)
+print(result)
