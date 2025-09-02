@@ -17,6 +17,7 @@ combo = [
 ]
 
 program = []
+output = []
 pointer = 0
 
 with open("./17.txt", "r") as file:
@@ -52,6 +53,12 @@ def jnz(operand): # 3
 
 def bxc(operand): #4
     B.value = B.value ^ C.value
+
+def out(operand): #5
+    output.append(combo[operand].value % 8)
+
+def bdv(operand): #6
+    
 
 instruction = [
     adv,
