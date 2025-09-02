@@ -21,44 +21,51 @@ while not np.array_equal(pos, end):
         new_pos = pos + np.array(dir)
         if mapa[tuple(new_pos)] == 0:
             mapa[tuple(new_pos)] = i
+            if i == 83:
+                pass
             path.append(new_pos)
             pos = new_pos
 
             i += 1
             break
-mapa[tuple(new_pos)] = i - 1
 
-cheats = {}
-for pos in path[:-3]:
-    n1 = mapa[tuple(pos)]
-    for dir1 in directions:
-        first_step = pos + np.array(dir1)
-        if mapa[tuple(first_step)] != -1:
-            continue
+def main(n):
+    y, x = np.ogrid[:mapa.shape[0], :mapa.shape[1]] 
+    cheats = {}
 
-        for dir2 in directions:
-            try:
-                second_step = first_step + np.array(dir2)
-                n2 = mapa[tuple(second_step)]
+    for pos in path:
+        mask = np.zeros(mapa.shape, dtype=int)
+        dist = abs(y - pos[0]) + abs(x - pos[1])  
+        mask[dist <= n] = 1
 
-                cheat_value = (n2 - n1) - 2
-                if cheat_value < 1:
-                    continue
+        reachable = (mapa != -1) & (mask == 1)
+        reachable = reachable.astype(int)
+        
+        n1 = mapa[tuple(pos)]
+        for reachable_pos in np.argwhere(reachable):
+            n2 = mapa[tuple(reachable_pos)]
 
-                cheats[tuple(np.array([pos, second_step]).flatten())] = cheat_value
-            except:
-                pass
+            cheat_value = (n2 - n1) - (abs(reachable_pos[0] - pos[0]) + abs(reachable_pos[1] - pos[1]))
+            if cheat_value < 1:
+                continue
+            
+            cheats[tuple(np.array([pos, reachable_pos]).flatten())] = cheat_value
+        
 
-def count_keys_with_same_value_obj(d):
-    obj_to_keys = defaultdict(int)
-    
-    for _, val in d.items():
-        obj_to_keys[val] += 1
-    
-    # Prepare a dict with counts for each value object
-    
-    return obj_to_keys
+    def count_keys_with_same_value_obj(d):
+        obj_to_keys = defaultdict(int)
 
-result = count_keys_with_same_value_obj(cheats)
-print(mapa)
-print(result)
+        ge_100 = 0
+        for _, val in d.items():
+            if val >= 100:
+                ge_100 += 1
+
+            obj_to_keys[val] += 1
+
+        return obj_to_keys, ge_100
+
+    cheat_summary,ge_100 = count_keys_with_same_value_obj(cheats)
+    return ge_100
+
+print(main(2))  # Part 1
+print(main(20)) # Part 2
