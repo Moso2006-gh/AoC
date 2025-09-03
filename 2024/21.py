@@ -1,6 +1,9 @@
+import re
 import itertools
 import numpy as np
 from pathlib import Path
+from typing import List
+from functools import cache
 
 input = open(Path(__file__).parent / "21.txt").read().split("\n")
 
@@ -25,47 +28,50 @@ robot_coords = {
     "A": np.array([0, 2])
 }
 
+@cache
 def get_move(diff):
-    move_vertical = ""
-    if diff[0] < 0:
-        move_vertical = "^"
-    else:
-        move_vertical = "v"
+    move_vertical = "^" if diff[0] < 0 else "v"
     move_vertical *= abs(diff[0])
 
-    move_horizontal = ""
-    if diff[1] < 0:
-        move_horizontal = "<"
-    else:
-        move_horizontal = ">"
+    move_horizontal = "<" if diff[1] < 0 else ">"
     move_horizontal *= abs(diff[1])
 
     return move_vertical, move_horizontal
 
+@cache
 def get_robot_paths(path):    
     robot = "A"
-    posible_paths = []
+    # posible_paths = []
+    robot_path = ""
     for char in path:
-        diff = robot_coords[char] - robot_coords[robot]
+        diff = tuple(robot_coords[char] - robot_coords[robot])  # Ensure it's a tuple
         move_vertical, move_horizontal = get_move(diff)
-        char_paths = set()
-        if not ((robot == "^" or robot == "A") and char == "<"):
-            char_paths.add(move_horizontal + move_vertical + "A")
-        if not ((char == "^" or char == "A") and robot == "<"):
-            char_paths.add(move_vertical + move_horizontal + "A")
+        # char_paths = set()
+        # if not ((robot == "^" or robot == "A") and char == "<"):
+        #     char_paths.add(move_horizontal + move_vertical + "A")
+        # if not ((char == "^" or char == "A") and robot == "<"):
+        #     char_paths.add(move_vertical + move_horizontal + "A")
         
-        posible_paths.append(list(char_paths))        
+        if not ((robot == "^" or robot == "A") and char == "<"):
+            robot_path += move_horizontal + move_vertical + "A"
+        else:
+            robot_path += move_vertical + move_horizontal + "A"
+
+        # posible_paths.append(list(char_paths))        
         robot = char
-    return posible_paths
+    return robot_path
 
 def get_all_paths(posible_paths):
     return [''.join(p) for p in itertools.product(*posible_paths)]
 
-def apply_robot(paths):
+def apply_robot(paths: List[str]):
     all_robot_paths = []
     shortest = np.inf
     for path in paths:
-        robot_paths = get_all_paths(get_robot_paths(path))
+        robot_path = ""
+        for sub_path in re.findall(r'.*?A', path):
+            robot_path += get_robot_paths(sub_path)
+        robot_paths = [robot_path]
         for robot_path in robot_paths:
             if len(robot_path) < shortest:
                 all_robot_paths = [robot_path]
@@ -82,7 +88,7 @@ for code in input:
     for char in code:
         diff = kepad_robot_coords[char] - kepad_robot_coords[kepad_robot]
         
-        move_vertical, move_horizontal = get_move(diff)
+        move_vertical, move_horizontal = get_move(tuple(diff))
 
         posible = set()
         if not (kepad_robot in ["7", "4", "1"] and char in ["0", "A"]):
@@ -92,9 +98,9 @@ for code in input:
         kepad_robot = char
 
         robot_paths = posible
-        for i in range(2):
+        for i in range(25):
+            print(i)
             robot_paths = apply_robot(robot_paths)
-            print(robot_paths[0])
 
         shortest = np.inf
         for path in robot_paths:
