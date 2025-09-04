@@ -1,8 +1,6 @@
-import re
-import itertools
 import numpy as np
 from pathlib import Path
-from typing import List
+from collections import defaultdict
 from functools import cache
 
 input = open(Path(__file__).parent / "21.txt").read().split("\n")
@@ -28,6 +26,8 @@ robot_coords = {
     "A": np.array([0, 2])
 }
 
+sequences = ['>^A', '^A', '>A', '>>^A', 'vA', 'A', '<A', 'v<<A', '<vA', 'v<A', '<^A', '^>A', '^<A', '>vA', 'v>A']
+
 @cache
 def get_move(diff):
     move_vertical = "^" if diff[0] < 0 else "v"
@@ -41,75 +41,66 @@ def get_move(diff):
 @cache
 def get_robot_paths(path):    
     robot = "A"
-    # posible_paths = []
-    robot_path = ""
+    robot_paths = []
     for char in path:
         diff = tuple(robot_coords[char] - robot_coords[robot])  # Ensure it's a tuple
         move_vertical, move_horizontal = get_move(diff)
-        # char_paths = set()
-        # if not ((robot == "^" or robot == "A") and char == "<"):
-        #     char_paths.add(move_horizontal + move_vertical + "A")
-        # if not ((char == "^" or char == "A") and robot == "<"):
-        #     char_paths.add(move_vertical + move_horizontal + "A")
         
+        char_paths = set()
         if not ((robot == "^" or robot == "A") and char == "<"):
-            robot_path += move_horizontal + move_vertical + "A"
-        else:
-            robot_path += move_vertical + move_horizontal + "A"
-
-        # posible_paths.append(list(char_paths))        
-        robot = char
-    return robot_path
-
-def get_all_paths(posible_paths):
-    return [''.join(p) for p in itertools.product(*posible_paths)]
-
-def apply_robot(paths: List[str]):
-    all_robot_paths = []
-    shortest = np.inf
-    for path in paths:
-        robot_path = ""
-        for sub_path in re.findall(r'.*?A', path):
-            robot_path += get_robot_paths(sub_path)
-        robot_paths = [robot_path]
-        for robot_path in robot_paths:
-            if len(robot_path) < shortest:
-                all_robot_paths = [robot_path]
-                shortest = len(robot_path)
-            elif len(robot_path) == shortest:
-                all_robot_paths.append(robot_path)
-    return all_robot_paths
-
-sol = 0
-for code in input:
-    print(code)
-    kepad_robot = "A"
-    length_of_seq = 0
-    for char in code:
-        diff = kepad_robot_coords[char] - kepad_robot_coords[kepad_robot]
+            char_paths.add(move_horizontal + move_vertical + "A")
+        if not ((char == "^" or char == "A") and robot == "<"):
+            char_paths.add(move_vertical + move_horizontal + "A")
         
-        move_vertical, move_horizontal = get_move(tuple(diff))
+        robot_paths.append(list(char_paths))        
+        robot = char
+    return robot_paths
 
-        posible = set()
-        if not (kepad_robot in ["7", "4", "1"] and char in ["0", "A"]):
-            posible.add(move_vertical + move_horizontal + "A")
-        if not (char in ["7", "4", "1"] and kepad_robot in ["0", "A"]):
-            posible.add(move_horizontal + move_vertical + "A")
-        kepad_robot = char
-
-        robot_paths = posible
-        for i in range(25):
-            print(i)
-            robot_paths = apply_robot(robot_paths)
-
+def get_cost(seg, sequences_cost):
+    cost = 0
+    for segment in get_robot_paths(seg):
         shortest = np.inf
-        for path in robot_paths:
-            if len(path) < shortest:
-                shortest = len(path)
+        for posible in segment:
+            cost_of_posible = sequences_cost[posible]
+            if cost_of_posible < shortest:
+                shortest = cost_of_posible
+        cost += shortest
+    return cost
 
-        length_of_seq += shortest
-    sol += length_of_seq * int(code[:-1])
+def main(n_robots):
+    sequences_cost = {x: len(x) for x in sequences}
+    for n in range(n_robots - 1):
+        new_sequence_cost = defaultdict(int)
+        for sequence in sequences:
+            new_sequence_cost[sequence] = get_cost(sequence, sequences_cost)
+        sequences_cost = new_sequence_cost 
 
-print(sol)
+    sol = 0
+    for code in input:
+        kepad_robot = "A"
+        length_of_seq = 0
+        for char in code:
+            diff = kepad_robot_coords[char] - kepad_robot_coords[kepad_robot]
+            
+            move_vertical, move_horizontal = get_move(tuple(diff))
 
-# <vA <A A >>^A vA A <^A >A   v<<A >>^A vA ^A     v<<A >>^A A <vA >A ^A ((vA<A^>A))<A>A  v<<A >A ^>A (<vA<A>>^A)AA<Av>A^AvA<^A>A
+            posible = set()
+            if not (kepad_robot in ["7", "4", "1"] and char in ["0", "A"]):
+                posible.add(move_vertical + move_horizontal + "A")
+            if not (char in ["7", "4", "1"] and kepad_robot in ["0", "A"]):
+                posible.add(move_horizontal + move_vertical + "A")
+            kepad_robot = char
+
+            shortest = np.inf
+            for path in posible:
+                cost = get_cost(path, sequences_cost)
+                if cost < shortest:
+                    shortest = cost
+
+            length_of_seq += shortest
+        sol += length_of_seq * int(code[:-1])
+
+    return sol
+
+print(main(2))
+print(main(25))
