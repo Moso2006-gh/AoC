@@ -1,3 +1,6 @@
+# Learned that many times is usefull to inver the problem (start from outside to in)
+# Keep in mind what they are asking, in this case we where only interested in the length
+
 import numpy as np
 from pathlib import Path
 from collections import defaultdict
